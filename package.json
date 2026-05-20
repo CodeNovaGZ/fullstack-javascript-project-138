@@ -1,0 +1,26 @@
+{
+  "name": "@hexlet/code",
+  "version": "1.0.0",
+  "description": "Cargador de paginas web",
+  "homepage": "https://github.com/CodeNovaGZ/fullstack-javascript-project-138#readme",
+  "bugs": {
+    "url": "https://github.com/CodeNovaGZ/fullstack-javascript-project-138/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CodeNovaGZ/fullstack-javascript-project-138.git"
+  },
+  "license": "ISC",
+  "author": "CodeNovaGZ",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.4.0",
+    "globals": "^17.6.0",
+    "jest": "^30.4.2"
+  }
+}
