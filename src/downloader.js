@@ -16,13 +16,26 @@ export default function downloader(url, outputDir) {
             return fs.mkdir(path.join(outputDir, getPrefixPage(url)+'_files'), {recursive: true})
             .then(()=>{
                 const resources = [];
-                $('img').each((i, el) => {
-                    const src = $(el).attr('src');
-                    resources.push({
-                        srcOriginal: src,
-                        urlComplete: new URL(src, url).href,
-                        nameFile: getResourceFileName(new URL(src, url).href),
-                        elemento: el,
+                const tags = [
+                    {tag: 'img[src]', attr: 'src'},
+                    {tag: 'link[href]', attr: 'href'},
+                    {tag: 'script[src]', attr: 'src'},
+                ]
+                const pageHostName = new URL(url).hostname;
+                tags.forEach(({tag, attr}) => {
+                    $(tag).each((i, el) => {
+                        const src = $(el).attr(attr);
+                        const urlObj = new URL(src, url);
+                        if (urlObj.hostname !== pageHostName) {
+                            return;
+                        }
+                        resources.push({
+                            srcOriginal: src,
+                            urlComplete: urlObj.href,
+                            nameFile: getResourceFileName(urlObj.href),
+                            elemento: el, 
+                            attr,
+                        })
                     })
                 })
                 return {$, resources}; 
@@ -38,7 +51,7 @@ export default function downloader(url, outputDir) {
                     console.error(`Error al descargar recurso ${resource.urlComplete}: ${error.message}`);
                 })
                 .then(()=>{
-                    $(resource.elemento).attr('src', path.join(getPrefixPage(url)+'_files', resource.nameFile));
+                    $(resource.elemento).attr(resource.attr, path.join(getPrefixPage(url)+'_files', resource.nameFile));
                 })
             }))
             .then(()=>{

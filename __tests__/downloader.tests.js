@@ -92,4 +92,49 @@ describe('downloader', () => {
 
         expect(htmlContent).toContain('src="example-com_files/example-com-assets-nodejs.png"');
     });
-});
+    
+    test('descarga recursos adicionales', async () => {
+        const fixtureHtml = `<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <title>Cursos de programación Codica</title>
+    <link rel="stylesheet" media="all" href="https://cdn2.codica.la/assets/menu.css">
+    <link rel="stylesheet" media="all" href="/assets/application.css">
+    <link href="/cursos" rel="canonical">
+  </head>
+  <body>
+    <img src="/assets/professions/nodejs.png" alt="Icono de la profesión de programador Node.js">
+    <h3>
+      <a href="/professions/nodejs">Programador Node.js</a>
+    </h3>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="/packs/js/runtime.js"></script>
+  </body>
+</html>`;
+
+        nock('https://example.com')
+            .get('/')
+            .reply(200, fixtureHtml);
+        nock('https://example.com')
+            .get('/assets/application.css')
+            .reply(200, 'fake-css-content', { 'Content-Type': 'text/css' });
+        nock('https://example.com')
+            .get('/cursos')
+            .reply(200, 'fake-canonical-content');
+        nock('https://example.com')
+            .get('/assets/professions/nodejs.png')
+            .reply(200, Buffer.from('fake-png-data'), { 'Content-Type': 'image/png' });
+        nock('https://example.com')
+            .get('/packs/js/runtime.js')
+            .reply(200, Buffer.from('fake-js-data'), { 'Content-Type': 'application/javascript' });
+
+        const filePath = await downloader('https://example.com', tempdir);
+        const htmlContent = await fs.readFile(filePath, 'utf-8');
+
+        expect(htmlContent).toContain('href="example-com_files/example-com-assets-application.css"');
+        expect(htmlContent).toContain('src="example-com_files/example-com-packs-js-runtime.js"');
+        await expect(fs.access(path.join(tempdir, 'example-com_files', 'example-com-assets-application.css'))).resolves.toBeUndefined();
+        await expect(fs.access(path.join(tempdir, 'example-com_files', 'example-com-packs-js-runtime.js'))).resolves.toBeUndefined();
+    });
+});  
