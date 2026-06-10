@@ -3,11 +3,14 @@ import * as fs  from 'fs/promises';
 import path from 'path';
 import {URL} from 'url';
 import * as cheerio from 'cheerio';
+import debug from 'debug';
 
+const log = debug('page-loader');
 
 export default function downloader(url, outputDir) {
     const fileName = getFileName(url);
     const filePath = path.join(outputDir, `${fileName}`);
+    log('Descargando página: %s', url);
     return axios.get(url)
         .then(({data}) => {
             return cheerio.load(data);
@@ -38,23 +41,27 @@ export default function downloader(url, outputDir) {
                         })
                     })
                 })
+                log('Recursos encontrados: %d', resources.length);
                 return {$, resources}; 
-            })  
+            }) 
         })
         .then(({$, resources})=>{
             return Promise.all(resources.map((resource)=>{
+                log('Descargando recurso: %s', resource.urlComplete);
                 return axios.get(resource.urlComplete, {responseType: 'arraybuffer'})
                 .then(({data})=>{
+                    log('Recurso descargado: %s', resource.urlComplete);
                     return fs.writeFile(path.join(outputDir, getPrefixPage(url)+'_files', resource.nameFile), data)
                 })
                 .catch((error)=>{
-                    console.error(`Error al descargar recurso ${resource.urlComplete}: ${error.message}`);
+                    log(`Error al descargar recurso ${resource.urlComplete}: ${error.message}`);
                 })
                 .then(()=>{
                     $(resource.elemento).attr(resource.attr, path.join(getPrefixPage(url)+'_files', resource.nameFile));
                 })
             }))
             .then(()=>{
+                log('Todos los recursos han sido procesados, escribiendo archivo HTML...');
                 return fs.writeFile(filePath, $.html());
             })
         })
