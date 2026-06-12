@@ -37,7 +37,44 @@ describe('downloader', () => {
         nock('https://example.com')
             .get('/')
             .replyWithError('Network error');
-        await expect(downloader('https://example.com', tempdir)).rejects.toThrow('Network error');
+        await expect(downloader('https://example.com', tempdir)).rejects.toThrow('No se recibió respuesta del servidor');
+    });
+
+    test('error 404 al descargar la pagina', async () => {
+        nock('https://example.com')
+            .get('/')
+            .reply(404, 'Not Found');
+        await expect(downloader('https://example.com', tempdir)).rejects.toThrow('Error al descargar la página: 404 Not Found');
+    });
+
+    test('error 404 al descargar recurso', async () => {
+        const fixtureHtml = `<html><head></head><body><img src="/assets/image.png"></body></html>`;
+        nock('https://example.com')
+            .get('/')
+            .reply(200, fixtureHtml);
+        nock('https://example.com')
+            .get('/assets/image.png')
+            .reply(404, 'Not Found');
+        const filePath = await downloader('https://example.com', tempdir);
+        const htmlContent = await fs.readFile(filePath, 'utf-8');
+        expect(htmlContent).toContain('src="example-com_files/example-com-assets-image.png"');
+    });
+
+    test('error 500 al descargar la pagina', async () => {
+        nock('https://example.com')
+            .get('/')
+            .reply(500, 'Internal Server Error');
+        await expect(downloader('https://example.com', tempdir)).rejects.toThrow('Error al descargar la página: 500 Internal Server Error');
+    });
+
+
+     test('error de archivo, ruta es un archivo', async () => {
+        const badPath = path.join(tempdir, 'example-com.html');
+        await fs.writeFile(badPath, '');
+        nock('https://example.com')
+            .get('/')
+            .reply(200, 'Hello, world!');
+        await expect(downloader('https://example.com', badPath)).rejects.toThrow(`Error al crear el directorio de recursos`);
     });
 
     test('descarga imagen y modifica src en HTML', async () => {
