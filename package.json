@@ -30,7 +30,8 @@
     "axios": "^1.16.1",
     "cheerio": "^1.2.0",
     "commander": "^14.0.3",
-    "debug": "^4.4.3"
+    "debug": "^4.4.3",
+    "listr": "^0.14.3"
   },
   "bin": {
     "page-loader": "./bin/downloader.js"

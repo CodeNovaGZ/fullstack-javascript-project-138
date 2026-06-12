@@ -4,10 +4,12 @@ import path from 'path';
 import {URL} from 'url';
 import * as cheerio from 'cheerio';
 import debug from 'debug';
+import Listr from 'listr';
 
 const log = debug('page-loader');
 
-export default function downloader(url, outputDir) {
+export default function downloader(url, outputDir, options = {}) {
+    const concurrent = options.concurrent ? Number(options.concurrent) : 3;
     const fileName = getFileName(url);
     const filePath = path.join(outputDir, `${fileName}`);
     log('Descargando página: %s', url);
@@ -58,35 +60,33 @@ export default function downloader(url, outputDir) {
             }) 
         })
         .then(({$, resources})=>{
-            return Promise.all(resources.map((resource)=>{
-                log('Descargando recurso: %s', resource.urlComplete);
-                return axios.get(resource.urlComplete, {responseType: 'arraybuffer', validateStatus: (status) => status === 200})
-                .then(({data})=>{
-                    log('Recurso descargado: %s', resource.urlComplete);
-                    return fs.writeFile(path.join(outputDir, getPrefixPage(url)+'_files', resource.nameFile), data)
-                })
-                .catch((error)=>{
-                    if(error.response) {
-                        log(`Error al descargar recurso ${resource.urlComplete}: ${error.response.status} ${error.response.statusText}`);
-                        console.error(`Error al descargar recurso ${resource.urlComplete}: ${error.response.status} ${error.response.statusText}`);
-                    } else if(error.request) {
-                        log(`Error al descargar recurso ${resource.urlComplete}: No se recibió respuesta del servidor`);
-                        console.error(`Error al descargar recurso ${resource.urlComplete}: No se recibió respuesta del servidor`);
-                    } else {
-                        log(`Error al descargar recurso ${resource.urlComplete}: ${error.message}`);
-                        console.error(`Error al descargar recurso ${resource.urlComplete}: ${error.message}`);
-                    }
-                })
-                .then(()=>{
-                    $(resource.elemento).attr(resource.attr, path.join(getPrefixPage(url)+'_files', resource.nameFile));
-                })
-            }))
-            .then(()=>{
+            const tasks = resources.map((resource) => ({
+                title: resource.nameFile,
+                task: () => axios.get(resource.urlComplete, {responseType: 'arraybuffer', validateStatus: (status) => status === 200})
+                    .then(({data})=>{
+                        log('Recurso descargado: %s', resource.urlComplete);
+                        return fs.writeFile(path.join(outputDir, getPrefixPage(url)+'_files', resource.nameFile), data);
+                    })
+                    .catch((error)=>{
+                        if(error.response) {
+                            log(`Error al descargar recurso ${resource.urlComplete}: ${error.response.status} ${error.response.statusText}`);
+                            console.error(`Error al descargar recurso ${resource.urlComplete}: ${error.response.status} ${error.response.statusText}`);
+                        } else if(error.request) {
+                            log(`Error al descargar recurso ${resource.urlComplete}: No se recibió respuesta del servidor`);
+                            console.error(`Error al descargar recurso ${resource.urlComplete}: No se recibió respuesta del servidor`);
+                        } else {
+                            log(`Error al descargar recurso ${resource.urlComplete}: ${error.message}`);
+                            console.error(`Error al descargar recurso ${resource.urlComplete}: ${error.message}`);
+                        }
+                    })
+                    .then(()=>{
+                        $(resource.elemento).attr(resource.attr, path.join(getPrefixPage(url)+'_files', resource.nameFile));
+                    }),
+            }));
+            const listr = new Listr(tasks, {concurrent});
+            return listr.run().then(()=>{
                 log('Todos los recursos han sido procesados, escribiendo archivo HTML...');
                 return fs.writeFile(filePath, $.html());
-            })
-            .catch((error)=>{
-                throw new Error(`Error al procesar los recursos: ${error.message}`);
             });
         })
         .then(()=>{
