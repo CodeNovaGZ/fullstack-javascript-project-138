@@ -8,7 +8,7 @@ import Listr from 'listr';
 
 const log = debug('page-loader');
 
-export default function downloader(url, outputDir, options = {}) {
+export default function downloader(url, outputDir = process.cwd(), options = {}) {
     const concurrent = options.concurrent ? Number(options.concurrent) : 3;
     const fileName = getFileName(url);
     const filePath = path.join(outputDir, `${fileName}`);
