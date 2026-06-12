@@ -8,7 +8,7 @@ import Listr from 'listr';
 
 const log = debug('page-loader');
 
-export default function downloader(url, outputDir, options = {}) {
+export default function downloader(url, outputDir = process.cwd(), options = {}) {
     const concurrent = options.concurrent ? Number(options.concurrent) : 3;
     const fileName = getFileName(url);
     const filePath = path.join(outputDir, `${fileName}`);
@@ -27,6 +27,11 @@ export default function downloader(url, outputDir, options = {}) {
             return cheerio.load(data);
         })
         .then(($)=>{
+            return fs.access(outputDir)
+            .catch(()=>{
+                throw new Error(`Error con el directorio de recursos: ${outputDir}`);
+            })
+            .then(()=>{
             return fs.mkdir(path.join(outputDir, getPrefixPage(url)+'_files'), {recursive: true})
             .catch((error)=>{
                 throw new Error(`Error al crear el directorio de recursos: ${error.message}`);
@@ -58,7 +63,8 @@ export default function downloader(url, outputDir, options = {}) {
                 log('Recursos encontrados: %d', resources.length);
                 return {$, resources}; 
             }) 
-        })
+        })}
+        )
         .then(({$, resources})=>{
             const tasks = resources.map((resource) => ({
                 title: resource.nameFile,
@@ -108,8 +114,11 @@ function getFileName(url) {
 
 function getResourceFileName(resourceSrc) {
     const parsed = new URL(resourceSrc);
-    const ext = path.extname(parsed.pathname); // ".png"
+    let ext = path.extname(parsed.pathname); // ".png"
     const urlWithoutExt = resourceSrc.replace(ext, '');
+    if(!ext) {
+        ext = '.html';
+    }
     const transformed = getPrefixPage(urlWithoutExt);
     return `${transformed}${ext}`;
 }
