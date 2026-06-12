@@ -17,7 +17,8 @@ program
             console.log(`Archivo descargado en: ${filePath}`);
         })
         .catch((error) => {
-            console.error(`Error al descargar la página: ${error.message}`);
+            console.error(error.message);
+            process.exit(1);
         });
     });
 
