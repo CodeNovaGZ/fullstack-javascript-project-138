@@ -114,8 +114,11 @@ function getFileName(url) {
 
 function getResourceFileName(resourceSrc) {
     const parsed = new URL(resourceSrc);
-    const ext = path.extname(parsed.pathname); // ".png"
+    let ext = path.extname(parsed.pathname); // ".png"
     const urlWithoutExt = resourceSrc.replace(ext, '');
+    if(!ext) {
+        ext = '.html';
+    }
     const transformed = getPrefixPage(urlWithoutExt);
     return `${transformed}${ext}`;
 }
