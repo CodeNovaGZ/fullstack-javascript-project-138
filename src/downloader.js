@@ -27,6 +27,11 @@ export default function downloader(url, outputDir, options = {}) {
             return cheerio.load(data);
         })
         .then(($)=>{
+            return fs.access(outputDir)
+            .catch(()=>{
+                throw new Error(`Error con el directorio de recursos: ${outputDir}`);
+            })
+            .then(()=>{
             return fs.mkdir(path.join(outputDir, getPrefixPage(url)+'_files'), {recursive: true})
             .catch((error)=>{
                 throw new Error(`Error al crear el directorio de recursos: ${error.message}`);
@@ -58,7 +63,8 @@ export default function downloader(url, outputDir, options = {}) {
                 log('Recursos encontrados: %d', resources.length);
                 return {$, resources}; 
             }) 
-        })
+        })}
+        )
         .then(({$, resources})=>{
             const tasks = resources.map((resource) => ({
                 title: resource.nameFile,
